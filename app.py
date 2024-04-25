@@ -7,7 +7,7 @@ import pdfplumber
 from docx import Document
 
 # Initialize LangChain with the API key from Streamlit secrets
-api_key = st.secrets["openai"]["api_key"]
+api_key = st.secrets["api_key"]
 client = OpenAIChatClient(api_key=api_key, model="gpt-4-turbo")
 lang_chain = LangChain(chat_client=client)
 
