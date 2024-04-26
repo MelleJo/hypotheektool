@@ -1,58 +1,55 @@
 import streamlit as st
 import os
-from docx import Document
 from PyPDF2 import PdfReader
+from docx import Document
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.chains import AnalyzeDocumentChain
-from langchain.chains.question_answering import load_qa_chain
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-# Definieer globale variabelen voor de paden
-motivatieteksten_path = "source documents/Teksten voor hypotheekadviesrapport in Fastlane (in concept, MvdB).docx"
-sjabloon_path = "source documents/Hyp. rapport zonder motivatieteksten.pdf"
+def extract_text_from_pdf(pdf_path):
+    reader = PdfReader(pdf_path)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text() + "\n"
+    return text
 
-def generate_report(user_input):
+def extract_text_from_docx(docx_path):
+    doc = Document(docx_path)
+    text = "\n".join([para.text for para in doc.paragraphs if para.text])
+    return text
+
+def generate_report(user_input, motivational_texts, template_text):
     with st.spinner('Verwerken...'):
-        # Ensure the output directory exists
-        output_dir = 'output'
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-
-        # Load motivational texts and template
-        motivatieteksten_doc = Document(motivatieteksten_path)
-        sjabloon_reader = PdfReader(sjabloon_path)
-
-        # Build the AI prompt
-        template = """
-        Analyseer de opgegeven input, haal op basis hiervan relevante motivatieteksten uit het document en verwerk deze in het sjabloon.
-        Zorg ervoor dat het rapport, afgezien van de namen, volledig voorbereid is en vul zoveel mogelijk in. Exporteer dit vervolgens als een .docx-bestand.
+        # Prepare the AI prompt
+        prompt = f"""
+        Op basis van de gebruikersinvoer: "{user_input}" en de beschikbare documenten, genereer een hypotheekadviesrapport. Integreer relevante motivatieteksten en gebruik het sjabloon om een coherent document te structureren. Hieronder volgen de beschikbare documentteksten:
+        Sjabloon: {template_text}
+        Motivatieteksten: {motivational_texts}
         """
-        prompt = ChatPromptTemplate.from_template(template)
-
+        
         # Set up the LangChain LLM chain
         llm = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4-turbo-2024-04-09", temperature=0, streaming=True)
-        chain = prompt | llm | StrOutputParser()
+        chain = ChatPromptTemplate(prompt) | llm | StrOutputParser()
 
         # Execute chain
-        document_text = ' '.join([para.text for para in motivatieteksten_doc.paragraphs])
-        output = chain.stream({
-            "document_text": document_text,
-            "user_input": user_input,
-        })
+        output = chain.stream()
 
         # Save output to a .docx file
         output_doc = Document()
         output_doc.add_paragraph(output)
-        output_path = os.path.join(output_dir, 'Hypotheek_Rapport.docx')
+        output_path = os.path.join('output', 'Hypotheek_Rapport.docx')
         output_doc.save(output_path)
         return output_path
 
 def main():
     st.title("Hypotheektool - Testversie 0.0.1")
     user_input = st.text_input("Geef informatie over het hypotheek adviestraject. Voeg hier geen persoonlijk identificeerbare informatie toe; deze details kun je later toevoegen.")
+    motivational_texts = extract_text_from_docx("source documents/Teksten voor hypotheekadviesrapport in Fastlane (in concept, MvdB).docx")
+    template_text = extract_text_from_pdf("source documents/Hyp. rapport zonder motivatieteksten.pdf")
+    
     if st.button("Rapport Genereren"):
-        report_path = generate_report(user_input)
+        report_path = generate_report(user_input, motivational_texts, template_text)
         if os.path.exists(report_path):
             with open(report_path, "rb") as file:
                 st.success('Rapport succesvol gegenereerd.')
@@ -66,4 +63,5 @@ def main():
             st.error("Er is een fout opgetreden bij het genereren van het rapport.")
 
 if __name__ == "__main__":
+    st.set_page_config(page_title="Hypotheek Adviesrapport Tool")
     main()
