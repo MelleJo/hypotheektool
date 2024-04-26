@@ -53,9 +53,17 @@ def main():
     user_input = st.text_input("Geef informatie over het hypotheek adviestraject. Voeg hier geen persoonlijk identificeerbare informatie toe; deze details kun je later toevoegen.")
     if st.button("Rapport Genereren"):
         report_path = generate_report(user_input)
-        st.success('Rapport succesvol gegenereerd.')
-        st.download_button('Download Rapport', report_path)
+        if os.path.exists(report_path):
+            with open(report_path, "rb") as file:
+                st.success('Rapport succesvol gegenereerd.')
+                st.download_button(
+                    label="Download Rapport",
+                    data=file,
+                    file_name="Hypotheek_Rapport.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+        else:
+            st.error("Er is een fout opgetreden bij het genereren van het rapport.")
 
 if __name__ == "__main__":
-    st.set_page_config(page_title="Hypotheek Adviesrapport Tool")
     main()
