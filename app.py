@@ -23,11 +23,17 @@ def generate_report(user_input, motivational_texts, template_text):
     with st.spinner('Verwerken...'):
         # Prepare the AI prompt
         prompt = f"""
-        Op basis van de gebruikersinvoer: "{user_input}" en de beschikbare documenten, genereer een hypotheekadviesrapport. Integreer relevante motivatieteksten en gebruik het sjabloon om een coherent document te structureren. Hieronder volgen de beschikbare documentteksten:
-        Sjabloon: {template_text}
-        Motivatieteksten: {motivational_texts}
-        """
+        Hier is de input van de gebruiker over een hypotheekadviesproces: "{user_input}". Gebruik deze informatie samen met de onderstaande motivatieteksten en sjabloon om een volledig gestructureerd hypotheekadviesrapport te genereren. Het doel is om een conceptdocument te creëren dat later kan worden aangepast met specifieke namen en details door de gebruiker.
+
+        === Sjabloon Inhoud ===
+        {template_text}
         
+        === Motivatieteksten ===
+        {motivational_texts}
+
+        Genereer op basis van deze gegevens een coherent adviesrapport in tekstvorm.
+        """
+
         # Set up the LangChain LLM chain
         llm = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4-turbo-2024-04-09", temperature=0, streaming=True)
         chain = ChatPromptTemplate(prompt) | llm | StrOutputParser()
@@ -41,6 +47,7 @@ def generate_report(user_input, motivational_texts, template_text):
         output_path = os.path.join('output', 'Hypotheek_Rapport.docx')
         output_doc.save(output_path)
         return output_path
+
 
 def main():
     st.title("Hypotheektool - Testversie 0.0.1")
