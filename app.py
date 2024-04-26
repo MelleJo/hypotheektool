@@ -14,32 +14,37 @@ sjabloon_path = "source documents/Hyp. rapport zonder motivatieteksten.pdf"
 
 def generate_report(user_input):
     with st.spinner('Verwerken...'):
-        # Laad motivatieteksten en sjabloon
+        # Ensure the output directory exists
+        output_dir = 'output'
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        # Load motivational texts and template
         motivatieteksten_doc = Document(motivatieteksten_path)
         sjabloon_reader = PdfReader(sjabloon_path)
 
-        # Bouw de AI-prompt
+        # Build the AI prompt
         template = """
         Analyseer de opgegeven input, haal op basis hiervan relevante motivatieteksten uit het document en verwerk deze in het sjabloon.
         Zorg ervoor dat het rapport, afgezien van de namen, volledig voorbereid is en vul zoveel mogelijk in. Exporteer dit vervolgens als een .docx-bestand.
         """
         prompt = ChatPromptTemplate.from_template(template)
 
-        # Stel de LangChain LLM keten in
+        # Set up the LangChain LLM chain
         llm = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4-turbo-2024-04-09", temperature=0, streaming=True)
         chain = prompt | llm | StrOutputParser()
 
-        # Voer keten uit
+        # Execute chain
         document_text = ' '.join([para.text for para in motivatieteksten_doc.paragraphs])
         output = chain.stream({
             "document_text": document_text,
             "user_input": user_input,
         })
 
-        # Sla output op in een .docx-bestand
+        # Save output to a .docx file
         output_doc = Document()
         output_doc.add_paragraph(output)
-        output_path = os.path.join('output', 'Hypotheek_Rapport.docx')
+        output_path = os.path.join(output_dir, 'Hypotheek_Rapport.docx')
         output_doc.save(output_path)
         return output_path
 
