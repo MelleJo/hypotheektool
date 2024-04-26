@@ -21,7 +21,7 @@ def extract_text_from_docx(docx_path):
 
 def generate_report(user_input, motivational_texts, template_text):
     with st.spinner('Verwerken...'):
-        # Prepare the AI prompt
+        # Prepare the AI prompt more dynamically
         prompt = f"""
         Hier is de input van de gebruiker over een hypotheekadviesproces: "{user_input}". Gebruik deze informatie samen met de onderstaande motivatieteksten en sjabloon om een volledig gestructureerd hypotheekadviesrapport te genereren. Het doel is om een conceptdocument te creëren dat later kan worden aangepast met specifieke namen en details door de gebruiker.
 
@@ -36,10 +36,11 @@ def generate_report(user_input, motivational_texts, template_text):
 
         # Set up the LangChain LLM chain
         llm = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4-turbo-2024-04-09", temperature=0, streaming=True)
-        chain = ChatPromptTemplate(prompt) | llm | StrOutputParser()
+        chain = ChatPromptTemplate.from_template(prompt) | llm | StrOutputParser()
 
         # Execute chain
-        output = chain.stream()
+        document_data = {"user_input": user_input}  # Ensuring data is correctly structured for the chain
+        output = chain.stream(document_data)
 
         # Save output to a .docx file
         output_doc = Document()
@@ -47,6 +48,7 @@ def generate_report(user_input, motivational_texts, template_text):
         output_path = os.path.join('output', 'Hypotheek_Rapport.docx')
         output_doc.save(output_path)
         return output_path
+
 
 
 def main():
